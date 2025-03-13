@@ -1,0 +1,44 @@
+
+git clone https://github.com/kubeflow/manifests.git
+
+Create Kind Cluster
+cat <<EOF | kind create cluster --name=kubeflow --config=-
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+nodes:
+- role: control-plane
+  image: kindest/node:v1.32.0@sha256:c48c62eac5da28cdadcf560d1d8616cfa6783b58f0d94cf63ad1bf49600cb027
+  kubeadmConfigPatches:
+  - |
+    kind: ClusterConfiguration
+    apiServer:
+      extraArgs:
+        "service-account-issuer": "https://kubernetes.default.svc"
+        "service-account-signing-key-file": "/etc/kubernetes/pki/sa.key"
+EOF
+
+Save Kubeconfig
+kind get kubeconfig --name kubeflow > /tmp/kubeflow-config
+export KUBECONFIG=/tmp/kubeflow-config
+
+
+cd manifist
+while ! kustomize build example | kubectl apply --server-side --force-conflicts -f -; do echo "Retrying to apply resources"; sleep 20; done
+
+# Build and load images
+cd sentiment_project
+docker buildx build --platform linux/arm64 -t yourusername/distilbert-train:latest -f Dockerfile.train .
+docker buildx build --platform linux/arm64 -t yourusername/distilbert-serving:latest -f Dockerfile.serve .
+kind load docker-image yourusername/distilbert-train:latest --name sentiment-analysis
+kind load docker-image yourusername/distilbert-serving:latest --name sentiment-analysis
+
+# Run pipeline
+python pipeline.py
+
+# Get KServe URL
+kubectl get inferenceservice -n default
+# Update web_app.py with the URL, e.g., http://sentiment-model-2025-03-13--12-34-56.default.127.0.0.1.nip.io/v1/models/sentiment:predict
+
+# Run web app
+pip install flask requests
+python web_app.py
