@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Sentiment Analysis</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        textarea { width: 100%; max-width: 500px; }
+        .result { margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>Real-Time Sentiment Analysis</h1>
+    <form method="POST">
+        <textarea name="review" rows="4" placeholder="Enter your review here"></textarea><br>
+        <input type="submit" value="Analyze Sentiment">
+    </form>
+    {% if review %}
+        <div class="result">
+            <p><strong>Review:</strong> {{ review }}</p>
+            <p><strong>Sentiment:</strong> {{ sentiment }}</p>
+            <p><strong>Positive Probability:</strong> {{ positive|round(2) }}</p>
+            <p><strong>Negative Probability:</strong> {{ negative|round(2) }}</p>
+        </div>
+    {% endif %}
+    {% if error %}
+        <p style="color:red">{{ error }}</p>
+    {% endif %}
+</body>
+</html>
