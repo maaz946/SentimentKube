@@ -1,0 +1,42 @@
+name: Trigger Kubeflow Pipeline
+
+on:
+  push:
+    paths:
+      - "pipeline.py"  # Trigger only when pipeline.py is updated
+    branches:
+      - master  # Adjust to your default branch
+
+jobs:
+  deploy-pipeline:
+    runs-on: ubuntu-latest
+    steps:
+      # Checkout the repository
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Set up Python
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.9"
+
+      # Install Kubeflow Pipelines SDK
+      - name: Install dependencies
+        run: pip install kfp
+
+      # Compile pipeline.py to YAML
+      - name: Compile pipeline
+        run: python pipeline.py
+
+      # Authenticate with Kubeflow and submit pipeline
+      - name: Submit pipeline to Kubeflow
+        env:
+          KUBEFLOW_HOST: ${{ secrets.KUBEFLOW_HOST }}  # Use secret for security
+          KUBEFLOW_USERNAME: ${{ secrets.KUBEFLOW_USERNAME }}
+          KUBEFLOW_PASSWORD: ${{ secrets.KUBEFLOW_PASSWORD }}
+        run: |
+          python -c "
+          import kfp
+          client = kfp.Client(host='$KUBEFLOW_HOST', username='$KUBEFLOW_USERNAME', password='$KUBEFLOW_PASSWORD')
+          client.upload_pipeline('sentiment_pipeline.yaml', pipeline_nam
